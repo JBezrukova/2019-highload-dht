@@ -16,12 +16,11 @@
 
 package ru.mail.polis.service;
 
-import java.io.IOException;
-
 import org.jetbrains.annotations.NotNull;
-
 import ru.mail.polis.dao.DAO;
 import ru.mail.polis.service.bezrukova.SimpleServiceImpl;
+
+import java.io.IOException;
 
 /**
  * Constructs {@link Service} instances.

@@ -32,9 +32,14 @@ public class SimpleServiceImpl extends HttpServer implements Service {
         return config;
     }
 
+    @Path("/v0/status")
+    public Response status() {
+        return new Response(Response.OK, Response.EMPTY);
+    }
+
     @Path("/v0/entity")
     public Response entity(@Param("id") final String id, @NotNull final Request request) {
-        if (id == null) {
+        if (id == null || id.isEmpty()) {
             return new Response(Response.BAD_REQUEST, Response.EMPTY);
         }
 
@@ -81,5 +86,10 @@ public class SimpleServiceImpl extends HttpServer implements Service {
     private Response delete(ByteBuffer key) throws IOException {
         dao.remove(key);
         return new Response(Response.ACCEPTED, Response.EMPTY);
+    }
+
+    @Override
+    public void handleDefault(Request request, HttpSession session) throws IOException {
+        session.sendResponse(new Response(Response.BAD_REQUEST, Response.EMPTY));
     }
 }
