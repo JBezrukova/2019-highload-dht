@@ -19,11 +19,19 @@ public class SimpleDAOImpl implements DAO {
         this.rocksDB = rocksDB;
     }
 
+    private synchronized byte[] getArray(ByteBuffer buffer) {
+        ByteBuffer copy = buffer.duplicate();
+        byte[] value = new byte[copy.remaining()];
+        copy.get(value);
+        return value;
+    }
+
     @NotNull
     @Override
     public Iterator<Record> iterator(@NotNull ByteBuffer from) {
         final RocksIterator rocksIterator = rocksDB.newIterator();
-        rocksIterator.seek(from.array());
+        final byte[] array = getArray(from);
+        rocksIterator.seek(array);
 
         return new IteratorImpl(rocksIterator);
     }
@@ -31,7 +39,9 @@ public class SimpleDAOImpl implements DAO {
     @Override
     public void upsert(@NotNull ByteBuffer key, @NotNull ByteBuffer value) throws IOException {
         try {
-            rocksDB.put(key.array(), value.array());
+            final byte[] keyArray = getArray(key);
+            final byte[] valueArray = getArray(value);
+            rocksDB.put(keyArray, valueArray);
         } catch (RocksDBException e) {
             throw new IOException(e.getMessage());
         }
@@ -40,7 +50,8 @@ public class SimpleDAOImpl implements DAO {
     @Override
     public void remove(@NotNull ByteBuffer key) throws IOException {
         try {
-            rocksDB.delete(key.array());
+            final byte[] array = getArray(key);
+            rocksDB.delete(array);
         } catch (RocksDBException e) {
             throw new IOException(e.getMessage());
         }
@@ -50,7 +61,8 @@ public class SimpleDAOImpl implements DAO {
     @Override
     public ByteBuffer get(@NotNull ByteBuffer key) throws IOException, NoSuchElementException {
         try {
-            final byte[] value = rocksDB.get(key.array());
+            final byte[] array = getArray(key);
+            final byte[] value = rocksDB.get(array);
             if (value == null) {
                 throw new SimpleNoSuchElementException("No element for given key " + key.toString());
             }
