@@ -11,6 +11,8 @@ import java.nio.ByteBuffer;
 import java.util.Iterator;
 import java.util.NoSuchElementException;
 
+import static org.rocksdb.BuiltinComparator.BYTEWISE_COMPARATOR;
+
 public class SimpleDAOImpl implements DAO {
 
     private final RocksDB rocksDB;
@@ -79,7 +81,7 @@ public class SimpleDAOImpl implements DAO {
 
     static SimpleDAOImpl init(File data) throws IOException {
         final Options options = new Options();
-        options.setComparator(new BytewiseComparator(new ComparatorOptions()));
+        options.setComparator(BYTEWISE_COMPARATOR);
         options.setCreateIfMissing(true);
         try {
             final RocksDB rocksDB = RocksDB.open(options, data.getPath());
