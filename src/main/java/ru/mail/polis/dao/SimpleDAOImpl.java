@@ -13,6 +13,7 @@ import java.nio.ByteBuffer;
 import java.util.Iterator;
 import java.util.NoSuchElementException;
 
+import static java.lang.Byte.MIN_VALUE;
 import static org.rocksdb.BuiltinComparator.BYTEWISE_COMPARATOR;
 
 public class SimpleDAOImpl implements DAO {
@@ -21,6 +22,24 @@ public class SimpleDAOImpl implements DAO {
 
     private SimpleDAOImpl(final RocksDB rocksDB) {
         this.rocksDB = rocksDB;
+    }
+
+    private byte[] convertValuesSubMinValue(final ByteBuffer byteBuffer) {
+        synchronized (this) {
+            final byte[] array = getArray(byteBuffer);
+            for (int i = 0; i < array.length; i++) {
+                array[i] -= MIN_VALUE;
+            }
+            return array;
+        }
+    }
+
+    private static ByteBuffer convertValuesAddMinValue(final byte[] array) {
+        final byte[] clone = array.clone();
+        for (int i = 0; i < array.length; i++) {
+            clone[i] += MIN_VALUE;
+        }
+        return ByteBuffer.wrap(clone);
     }
 
     private byte[] getArray(final ByteBuffer buffer) {
@@ -36,7 +55,7 @@ public class SimpleDAOImpl implements DAO {
     @Override
     public Iterator<Record> iterator(@NotNull final ByteBuffer from) {
         final RocksIterator rocksIterator = rocksDB.newIterator();
-        final byte[] array = getArray(from);
+        final byte[] array = convertValuesSubMinValue(from);
         rocksIterator.seek(array);
 
         return new IteratorImpl(rocksIterator);
@@ -45,7 +64,7 @@ public class SimpleDAOImpl implements DAO {
     @Override
     public void upsert(@NotNull final ByteBuffer key, @NotNull final ByteBuffer value) throws IOException {
         try {
-            final byte[] keyArray = getArray(key);
+            final byte[] keyArray = convertValuesSubMinValue(key);
             final byte[] valueArray = getArray(value);
             rocksDB.put(keyArray, valueArray);
         } catch (RocksDBException e) {
@@ -56,7 +75,7 @@ public class SimpleDAOImpl implements DAO {
     @Override
     public void remove(@NotNull final ByteBuffer key) throws IOException {
         try {
-            final byte[] array = getArray(key);
+            final byte[] array = convertValuesSubMinValue(key);
             rocksDB.delete(array);
         } catch (RocksDBException e) {
             throw new IOException(e);
@@ -67,7 +86,7 @@ public class SimpleDAOImpl implements DAO {
     @Override
     public ByteBuffer get(@NotNull final ByteBuffer key) throws IOException, NoSuchElementException {
         try {
-            final byte[] array = getArray(key);
+            final byte[] array = convertValuesSubMinValue(key);
             final byte[] value = rocksDB.get(array);
             if (value == null) {
                 throw new SimpleNoSuchElementException("No element for given key " + key.toString());
@@ -120,7 +139,8 @@ public class SimpleDAOImpl implements DAO {
         @Override
         public Record next() {
             if (hasNext()) {
-                final Record record = Record.of(ByteBuffer.wrap(iterator.key()), ByteBuffer.wrap(iterator.value()));
+                final ByteBuffer key = SimpleDAOImpl.convertValuesAddMinValue(iterator.key());
+                final Record record = Record.of(key, ByteBuffer.wrap(iterator.value()));
                 iterator.next();
                 return record;
             } else {
