@@ -4,12 +4,14 @@ import java.util.NoSuchElementException;
 
 public class SimpleNoSuchElementException extends NoSuchElementException {
 
-    SimpleNoSuchElementException(String message) {
+    SimpleNoSuchElementException(final String message) {
         super(message);
     }
 
     @Override
-    public synchronized Throwable fillInStackTrace() {
-        return this;
+    public Throwable fillInStackTrace() {
+        synchronized (this) {
+            return this;
+        }
     }
 }

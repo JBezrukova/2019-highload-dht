@@ -1,7 +1,13 @@
 package ru.mail.polis.service.bezrukova;
 
 import com.google.common.base.Charsets;
-import one.nio.http.*;
+import one.nio.http.HttpServer;
+import one.nio.http.HttpServerConfig;
+import one.nio.http.HttpSession;
+import one.nio.http.Param;
+import one.nio.http.Path;
+import one.nio.http.Request;
+import one.nio.http.Response;
 import one.nio.server.AcceptorConfig;
 import org.jetbrains.annotations.NotNull;
 import ru.mail.polis.dao.DAO;
@@ -25,8 +31,8 @@ public class SimpleServiceImpl extends HttpServer implements Service {
             throw new IllegalArgumentException("Invalid port");
         }
 
-        AcceptorConfig acceptor = new AcceptorConfig();
-        HttpServerConfig config = new HttpServerConfig();
+        final AcceptorConfig acceptor = new AcceptorConfig();
+        final HttpServerConfig config = new HttpServerConfig();
         acceptor.port = port;
         config.acceptors = new AcceptorConfig[]{acceptor};
         return config;
@@ -37,13 +43,19 @@ public class SimpleServiceImpl extends HttpServer implements Service {
         return new Response(Response.OK, Response.EMPTY);
     }
 
+    /**
+     * Getting a response entity for path "/v0/entity".
+     * @param id type String
+     * @param request type Request
+     * @return Response object
+     */
     @Path("/v0/entity")
     public Response entity(@Param("id") final String id, @NotNull final Request request) {
         if (id == null || id.isEmpty()) {
             return new Response(Response.BAD_REQUEST, Response.EMPTY);
         }
 
-        ByteBuffer key = ByteBuffer.wrap(id.getBytes(Charsets.UTF_8));
+        final ByteBuffer key = ByteBuffer.wrap(id.getBytes(Charsets.UTF_8));
 
         try {
             switch (request.getMethod()) {
@@ -65,10 +77,10 @@ public class SimpleServiceImpl extends HttpServer implements Service {
     }
 
     //return 200 OK and value or 404 Not Found
-    private Response get(ByteBuffer key) throws IOException {
+    private Response get(final ByteBuffer key) throws IOException {
         try {
-            ByteBuffer copy = dao.get(key).duplicate();
-            byte[] value = new byte[copy.remaining()];
+            final ByteBuffer copy = dao.get(key).duplicate();
+            final byte[] value = new byte[copy.remaining()];
             copy.get(value);
             return new Response(Response.OK, value);
         } catch (NoSuchElementException e) {
@@ -77,19 +89,19 @@ public class SimpleServiceImpl extends HttpServer implements Service {
     }
 
     //return 201  Created
-    private Response put(ByteBuffer key, Request request) throws IOException {
+    private Response put(final ByteBuffer key, final Request request) throws IOException {
         dao.upsert(key, ByteBuffer.wrap(request.getBody()));
         return new Response(Response.CREATED, Response.EMPTY);
     }
 
     //return 202  Accepted
-    private Response delete(ByteBuffer key) throws IOException {
+    private Response delete(final ByteBuffer key) throws IOException {
         dao.remove(key);
         return new Response(Response.ACCEPTED, Response.EMPTY);
     }
 
     @Override
-    public void handleDefault(Request request, HttpSession session) throws IOException {
+    public void handleDefault(final Request request, final HttpSession session) throws IOException {
         session.sendResponse(new Response(Response.BAD_REQUEST, Response.EMPTY));
     }
 }

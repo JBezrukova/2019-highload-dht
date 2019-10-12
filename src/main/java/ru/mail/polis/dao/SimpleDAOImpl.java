@@ -1,8 +1,10 @@
 package ru.mail.polis.dao;
 
 import org.jetbrains.annotations.NotNull;
-import org.rocksdb.*;
-import org.rocksdb.util.BytewiseComparator;
+import org.rocksdb.Options;
+import org.rocksdb.RocksDB;
+import org.rocksdb.RocksDBException;
+import org.rocksdb.RocksIterator;
 import ru.mail.polis.Record;
 
 import java.io.File;
@@ -17,20 +19,22 @@ public class SimpleDAOImpl implements DAO {
 
     private final RocksDB rocksDB;
 
-    private SimpleDAOImpl(RocksDB rocksDB) {
+    private SimpleDAOImpl(final RocksDB rocksDB) {
         this.rocksDB = rocksDB;
     }
 
-    private synchronized byte[] getArray(ByteBuffer buffer) {
-        ByteBuffer copy = buffer.duplicate();
-        byte[] value = new byte[copy.remaining()];
-        copy.get(value);
-        return value;
+    private byte[] getArray(final ByteBuffer buffer) {
+        synchronized (this) {
+            final ByteBuffer copy = buffer.duplicate();
+            final byte[] value = new byte[copy.remaining()];
+            copy.get(value);
+            return value;
+        }
     }
 
     @NotNull
     @Override
-    public Iterator<Record> iterator(@NotNull ByteBuffer from) {
+    public Iterator<Record> iterator(@NotNull final ByteBuffer from) {
         final RocksIterator rocksIterator = rocksDB.newIterator();
         final byte[] array = getArray(from);
         rocksIterator.seek(array);
@@ -39,29 +43,29 @@ public class SimpleDAOImpl implements DAO {
     }
 
     @Override
-    public void upsert(@NotNull ByteBuffer key, @NotNull ByteBuffer value) throws IOException {
+    public void upsert(@NotNull final ByteBuffer key, @NotNull final ByteBuffer value) throws IOException {
         try {
             final byte[] keyArray = getArray(key);
             final byte[] valueArray = getArray(value);
             rocksDB.put(keyArray, valueArray);
         } catch (RocksDBException e) {
-            throw new IOException(e.getMessage());
+            throw new IOException(e);
         }
     }
 
     @Override
-    public void remove(@NotNull ByteBuffer key) throws IOException {
+    public void remove(@NotNull final ByteBuffer key) throws IOException {
         try {
             final byte[] array = getArray(key);
             rocksDB.delete(array);
         } catch (RocksDBException e) {
-            throw new IOException(e.getMessage());
+            throw new IOException(e);
         }
     }
 
     @NotNull
     @Override
-    public ByteBuffer get(@NotNull ByteBuffer key) throws IOException, NoSuchElementException {
+    public ByteBuffer get(@NotNull final ByteBuffer key) throws IOException, NoSuchElementException {
         try {
             final byte[] array = getArray(key);
             final byte[] value = rocksDB.get(array);
@@ -70,7 +74,7 @@ public class SimpleDAOImpl implements DAO {
             }
             return ByteBuffer.wrap(value);
         } catch (RocksDBException e) {
-            throw new IOException(e.getMessage());
+            throw new IOException(e);
         }
     }
 
@@ -79,7 +83,7 @@ public class SimpleDAOImpl implements DAO {
         rocksDB.close();
     }
 
-    static SimpleDAOImpl init(File data) throws IOException {
+    static SimpleDAOImpl init(final File data) throws IOException {
         final Options options = new Options();
         options.setComparator(BYTEWISE_COMPARATOR);
         options.setCreateIfMissing(true);
@@ -87,7 +91,7 @@ public class SimpleDAOImpl implements DAO {
             final RocksDB rocksDB = RocksDB.open(options, data.getPath());
             return new SimpleDAOImpl(rocksDB);
         } catch (RocksDBException e) {
-            throw new IOException(e.getMessage());
+            throw new IOException(e);
         }
     }
 
@@ -96,7 +100,7 @@ public class SimpleDAOImpl implements DAO {
         try {
             rocksDB.compactRange();
         } catch (RocksDBException e) {
-            throw new IOException(e.getMessage());
+            throw new IOException(e);
         }
     }
 
@@ -104,7 +108,7 @@ public class SimpleDAOImpl implements DAO {
 
         private final RocksIterator iterator;
 
-        IteratorImpl(RocksIterator rocksIterator) {
+        IteratorImpl(final RocksIterator rocksIterator) {
             iterator = rocksIterator;
         }
 
@@ -116,7 +120,7 @@ public class SimpleDAOImpl implements DAO {
         @Override
         public Record next() {
             if (hasNext()) {
-                Record record = Record.of(ByteBuffer.wrap(iterator.key()), ByteBuffer.wrap(iterator.value()));
+                final Record record = Record.of(ByteBuffer.wrap(iterator.key()), ByteBuffer.wrap(iterator.value()));
                 iterator.next();
                 return record;
             } else {
