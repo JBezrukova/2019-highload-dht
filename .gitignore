@@ -15,6 +15,7 @@
 !.codeclimate.yml
 !*.lua
 !gradle/wrapper/*
-
+!*.txt
+!*.svg
 # ...even if they are in subdirectories
 !*/
