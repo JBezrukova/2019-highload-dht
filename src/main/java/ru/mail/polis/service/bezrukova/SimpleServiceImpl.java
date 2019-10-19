@@ -45,7 +45,8 @@ public class SimpleServiceImpl extends HttpServer implements Service {
 
     /**
      * Getting a response entity for path "/v0/entity".
-     * @param id type String
+     *
+     * @param id      type String
      * @param request type Request
      * @return Response object
      */
