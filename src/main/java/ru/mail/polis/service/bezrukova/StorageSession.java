@@ -60,9 +60,12 @@ public class StorageSession extends HttpSession {
         }
     }
 
-    private void writeChunk(byte[] key, byte[] value, String keyValueString, int chunkLength) throws IOException {
-        byte[] chunkArray = new byte[chunkLength];
-        ByteBuffer byteBuffer = ByteBuffer.wrap(chunkArray);
+    private void writeChunk(final byte[] key,
+                            final byte[] value,
+                            final String keyValueString,
+                            final int chunkLength) throws IOException {
+        final byte[] chunkArray = new byte[chunkLength];
+        final ByteBuffer byteBuffer = ByteBuffer.wrap(chunkArray);
         byteBuffer.put(keyValueString.getBytes(Charset.defaultCharset()));
         byteBuffer.put(CRLF);
         byteBuffer.put(key);

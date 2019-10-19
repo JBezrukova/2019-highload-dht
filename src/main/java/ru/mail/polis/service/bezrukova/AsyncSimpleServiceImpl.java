@@ -19,6 +19,8 @@ import java.nio.charset.Charset;
 import java.util.Iterator;
 import java.util.NoSuchElementException;
 import java.util.concurrent.Executor;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 
 public class AsyncSimpleServiceImpl extends HttpServer implements Service {
 
@@ -26,6 +28,16 @@ public class AsyncSimpleServiceImpl extends HttpServer implements Service {
 
     private final Executor executor;
 
+    private final Logger logger = Logger.getLogger(AsyncSimpleServiceImpl.class.getName());
+
+    /**
+     * Creating AsyncSimpleServiceImpl.
+     *
+     * @param port     - final int
+     * @param dao      - final DAO
+     * @param executor - final Executor
+     * @throws IOException throws Input/Output exception
+     */
     public AsyncSimpleServiceImpl(final int port, final DAO dao, final Executor executor) throws IOException {
         super(from(port));
         this.dao = dao;
@@ -52,16 +64,15 @@ public class AsyncSimpleServiceImpl extends HttpServer implements Service {
         ac.port = port;
         ac.reusePort = true;
         ac.deferAccept = true;
-        HttpServerConfig config = new HttpServerConfig();
+        final HttpServerConfig config = new HttpServerConfig();
         config.acceptors = new AcceptorConfig[]{ac};
         return config;
     }
 
-
     private Response get(final String id) throws IOException {
         try {
-            ByteBuffer value = dao.get(ByteBuffer.wrap(id.getBytes(Charset.defaultCharset())));
-            byte[] bytes = SimpleDAOImpl.getArray(value);
+            final ByteBuffer value = dao.get(ByteBuffer.wrap(id.getBytes(Charset.defaultCharset())));
+            final byte[] bytes = SimpleDAOImpl.getArray(value);
             return new Response(Response.OK, bytes);
         } catch (NoSuchElementException e) {
             return new Response(Response.NOT_FOUND, Response.EMPTY);
@@ -103,7 +114,7 @@ public class AsyncSimpleServiceImpl extends HttpServer implements Service {
                     session.sendError(Response.METHOD_NOT_ALLOWED, "No method found");
                     break;
             }
-        } catch (Exception e) {
+        } catch (IOException e) {
             session.sendError(Response.INTERNAL_ERROR, e.getMessage());
         }
     }
@@ -130,7 +141,7 @@ public class AsyncSimpleServiceImpl extends HttpServer implements Service {
             final Iterator<Record> records = dao.range(ByteBuffer.wrap(start.getBytes(Charset.defaultCharset())),
                     end == null ? null : ByteBuffer.wrap(end.getBytes(Charset.defaultCharset())));
             ((StorageSession) session).stream(records);
-        } catch (Exception e) {
+        } catch (IOException e) {
             session.sendError(Response.INTERNAL_ERROR, e.getMessage());
         }
     }
@@ -146,6 +157,7 @@ public class AsyncSimpleServiceImpl extends HttpServer implements Service {
                 break;
             default:
                 session.sendError(Response.BAD_REQUEST, "No pattern for path");
+                break;
         }
     }
 
@@ -153,11 +165,11 @@ public class AsyncSimpleServiceImpl extends HttpServer implements Service {
         executor.execute(() -> {
             try {
                 session.sendResponse(action.act());
-            } catch (Exception e) {
+            } catch (IOException e) {
                 try {
                     session.sendError(Response.INTERNAL_ERROR, e.getMessage());
                 } catch (IOException ex) {
-                    ex.getMessage();
+                    logger.log(Level.INFO, ex.getMessage());
                 }
             }
         });

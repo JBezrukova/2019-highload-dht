@@ -20,7 +20,6 @@ import com.google.common.util.concurrent.ThreadFactoryBuilder;
 import org.jetbrains.annotations.NotNull;
 import ru.mail.polis.dao.DAO;
 import ru.mail.polis.service.bezrukova.AsyncSimpleServiceImpl;
-import ru.mail.polis.service.bezrukova.SimpleServiceImpl;
 
 import java.io.IOException;
 import java.util.concurrent.Executor;

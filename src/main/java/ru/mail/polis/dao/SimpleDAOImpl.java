@@ -42,11 +42,17 @@ public class SimpleDAOImpl implements DAO {
         return ByteBuffer.wrap(clone);
     }
 
+    /**
+     * Getting a byte array.
+     *
+     * @param buffer - final ByteBuffer
+     * @return byte array
+     */
     public static byte[] getArray(final ByteBuffer buffer) {
-            final ByteBuffer copy = buffer.duplicate();
-            final byte[] value = new byte[copy.remaining()];
-            copy.get(value);
-            return value;
+        final ByteBuffer copy = buffer.duplicate();
+        final byte[] value = new byte[copy.remaining()];
+        copy.get(value);
+        return value;
     }
 
     @NotNull
