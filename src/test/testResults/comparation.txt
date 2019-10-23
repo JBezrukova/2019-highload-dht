@@ -1,0 +1,51 @@
+synchronous get
+
+Latency Distribution (HdrHistogram - Recorded Latency)
+ 50.000%    1.52ms
+ 75.000%    2.23ms
+ 90.000%    2.88ms
+ 99.000%    8.05ms
+ 99.900%   17.84ms
+ 99.990%   26.46ms
+ 99.999%   28.83ms
+100.000%   29.38ms
+
+asynchronous get
+
+Latency Distribution (HdrHistogram - Recorded Latency)
+ 50.000%    1.33ms
+ 75.000%    1.91ms
+ 90.000%    2.39ms
+ 99.000%    4.23ms
+ 99.900%    8.39ms
+ 99.990%    9.73ms
+ 99.999%   10.16ms
+100.000%   10.23ms
+
+synchronous put
+
+Latency Distribution (HdrHistogram - Recorded Latency)
+ 50.000%    1.29ms
+ 75.000%    1.86ms
+ 90.000%    2.38ms
+ 99.000%   11.56ms
+ 99.900%   20.85ms
+ 99.990%   23.73ms
+ 99.999%   25.22ms
+100.000%   25.36ms
+
+asynchronous put
+
+Latency Distribution (HdrHistogram - Recorded Latency)
+ 50.000%    1.34ms
+ 75.000%    1.94ms
+ 90.000%    2.48ms
+ 99.000%    4.13ms
+ 99.900%    9.61ms
+ 99.990%   13.07ms
+ 99.999%   14.17ms
+100.000%   14.39ms
+
+the results of testing using synchronous and asynchronous server differ by about 1.5 - 2 times
+
+
