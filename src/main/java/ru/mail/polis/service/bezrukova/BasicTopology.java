@@ -13,6 +13,12 @@ public class BasicTopology implements Topology<String> {
     @NotNull
     private final String[] nodes;
 
+    /**
+     * BasicTopology constructor.
+     *
+     * @param nodes - final Set
+     * @param me    - final String
+     */
     public BasicTopology(@NotNull final Set<String> nodes, @NotNull final String me) {
         assert nodes.contains(me);
         this.me = me;
@@ -23,14 +29,14 @@ public class BasicTopology implements Topology<String> {
 
     @NotNull
     @Override
-    public String primaryFor(@NotNull ByteBuffer key) {
+    public String primaryFor(@NotNull final ByteBuffer key) {
         final int hash = key.hashCode();
         final int node = (hash & Integer.MAX_VALUE) % nodes.length;
         return nodes[node];
     }
 
     @Override
-    public boolean isMe(@NotNull String node) {
+    public boolean isMe(@NotNull final String node) {
         return me.equals(node);
     }
 

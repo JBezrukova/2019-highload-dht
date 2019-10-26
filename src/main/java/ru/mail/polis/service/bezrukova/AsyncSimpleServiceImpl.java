@@ -96,6 +96,12 @@ public class AsyncSimpleServiceImpl extends HttpServer implements Service {
             return;
         }
 
+        executeRequest(request, session, id);
+    }
+
+    void executeRequest(final Request request,
+                                final HttpSession session,
+                                final String id) throws IOException {
         try {
             switch (request.getMethod()) {
                 case Request.METHOD_GET:

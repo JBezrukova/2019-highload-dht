@@ -60,32 +60,12 @@ public class ShardedSimpleServiceImpl extends AsyncSimpleServiceImpl {
         final ByteBuffer key = ByteBuffer.wrap(id.getBytes(Charset.defaultCharset()));
         final String primary = topology.primaryFor(key);
 
-        try {
-            if (!topology.isMe(primary)) {
-                executeAsync(session, () -> proxy(primary, request));
-                return;
-            }
-
-            switch (request.getMethod()) {
-                case Request.METHOD_GET:
-                    executeAsync(session, () -> get(id));
-                    break;
-
-                case Request.METHOD_PUT:
-                    executeAsync(session, () -> upsert(id, request.getBody()));
-                    break;
-
-                case Request.METHOD_DELETE:
-                    executeAsync(session, () -> delete(id));
-                    break;
-
-                default:
-                    session.sendError(Response.METHOD_NOT_ALLOWED, "No method found");
-                    break;
-            }
-        } catch (IOException e) {
-            session.sendError(Response.INTERNAL_ERROR, e.getMessage());
+        if (!topology.isMe(primary)) {
+            executeAsync(session, () -> proxy(primary, request));
+            return;
         }
+
+        executeRequest(request, session, id);
     }
 
     private Response proxy(final String node, final Request request) throws IOException {
@@ -100,10 +80,11 @@ public class ShardedSimpleServiceImpl extends AsyncSimpleServiceImpl {
     @Override
     public void handleDefault(final Request request, final HttpSession session) throws IOException {
         final String path = request.getPath();
-        if (!path.equals("/v0/entity")) {
-            super.handleDefault(request, session);
-        } else {
+        final String entity = "/v0/entity";
+        if (path.equals(entity)) {
             entity(request, session);
+        } else {
+            super.handleDefault(request, session);
         }
     }
 }
