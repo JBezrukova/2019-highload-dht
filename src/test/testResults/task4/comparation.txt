@@ -1,0 +1,30 @@
+Put async                       Put sharded
+
+50.000%    1.34ms             50.000%    1.43ms
+75.000%    1.94ms             75.000%    2.13ms
+90.000%    2.48ms             90.000%    3.63ms
+99.000%    4.13ms             99.000%   21.89ms
+99.900%    9.61ms             99.900%   30.67ms
+99.990%   13.07ms             99.990%   34.94ms
+99.999%   14.17ms             99.999%   38.24ms
+100.000%   14.39ms            100.000%   38.53ms
+
+The working time of the put method has been increased in more than 2 times for 99.99 - 100 %.
+The working time of the put method has been increased in more than 3 times for 99.900%.
+The working time of the put method has been increased in more than 5 times for 99.000%.
+
+
+Get async                         Get Sharded
+
+50.000%    1.33ms             50.000%    1.38ms
+75.000%    1.91ms             75.000%    1.99ms
+90.000%    2.39ms             90.000%    2.56ms
+99.000%    4.23ms             99.000%    5.88ms
+99.900%    8.39ms             99.900%   12.44ms
+99.990%    9.73ms             99.990%   16.91ms
+99.999%   10.16ms             99.999%   17.14ms
+100.000%   10.23ms            100.000%   17.26ms
+
+The working time of the get method has been increased in more than 1.5 times for 99.990 - 100 %.
+
+The reason of increasing is implementing a proxying in sharded realisation.
