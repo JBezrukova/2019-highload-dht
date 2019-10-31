@@ -11,10 +11,7 @@ public class SimpleNoSuchElementException extends NoSuchElementException {
     }
 
     @Override
-    @SuppressWarnings("UnsynchronizedOverridesSynchronized")
-    public Throwable fillInStackTrace() {
-        synchronized (this) {
-            return this;
-        }
+    public synchronized Throwable fillInStackTrace() {
+        return this;
     }
 }

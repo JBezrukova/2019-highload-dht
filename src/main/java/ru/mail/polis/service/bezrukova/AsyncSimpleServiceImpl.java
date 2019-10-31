@@ -69,7 +69,7 @@ public class AsyncSimpleServiceImpl extends HttpServer implements Service {
         return config;
     }
 
-    Response get(final String id) throws IOException {
+    private Response get(final String id) throws IOException {
         try {
             final ByteBuffer value = dao.get(ByteBuffer.wrap(id.getBytes(Charset.defaultCharset())));
             final byte[] bytes = SimpleDAOImpl.getArray(value);
@@ -79,12 +79,12 @@ public class AsyncSimpleServiceImpl extends HttpServer implements Service {
         }
     }
 
-    Response delete(final String id) throws IOException {
+    private Response delete(final String id) throws IOException {
         dao.remove(ByteBuffer.wrap(id.getBytes(Charset.defaultCharset())));
         return new Response(Response.ACCEPTED, Response.EMPTY);
     }
 
-    Response upsert(final String id, final byte[] value) throws IOException {
+    private Response upsert(final String id, final byte[] value) throws IOException {
         dao.upsert(ByteBuffer.wrap(id.getBytes(Charset.defaultCharset())), ByteBuffer.wrap(value));
         return new Response(Response.CREATED, Response.EMPTY);
     }
@@ -96,12 +96,6 @@ public class AsyncSimpleServiceImpl extends HttpServer implements Service {
             return;
         }
 
-        executeRequest(request, session, id);
-    }
-
-    void executeRequest(final Request request,
-                                final HttpSession session,
-                                final String id) throws IOException {
         try {
             switch (request.getMethod()) {
                 case Request.METHOD_GET:
@@ -167,7 +161,7 @@ public class AsyncSimpleServiceImpl extends HttpServer implements Service {
         }
     }
 
-    void executeAsync(final HttpSession session, final Action action) {
+    private void executeAsync(final HttpSession session, final Action action) {
         executor.execute(() -> {
             try {
                 session.sendResponse(action.act());
