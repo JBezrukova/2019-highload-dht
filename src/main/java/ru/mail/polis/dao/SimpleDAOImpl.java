@@ -2,6 +2,7 @@ package ru.mail.polis.dao;
 
 import static java.lang.Byte.MIN_VALUE;
 import org.jetbrains.annotations.NotNull;
+
 import static org.rocksdb.BuiltinComparator.BYTEWISE_COMPARATOR;
 import org.rocksdb.Options;
 import org.rocksdb.RocksDB;
@@ -75,6 +76,13 @@ public class SimpleDAOImpl implements DAO {
         }
     }
 
+    /**
+     * Upsert with timestamps.
+     *
+     * @param key   - final ByteBuffer
+     * @param value - final ByteBuffer
+     * @throws IOException - throws an exception if RocksDBException exists.
+     */
     public void upsertWithTimestamp(@NotNull final ByteBuffer key, @NotNull final ByteBuffer value) throws IOException {
         try {
             final byte[] convertedKey = convertValuesSubMinValue(key);
@@ -95,6 +103,12 @@ public class SimpleDAOImpl implements DAO {
         }
     }
 
+    /**
+     * Remove with timestamps.
+     *
+     * @param key - ByteBuffer key
+     * @throws IOException - throws an exception if RocksDBException exists.
+     */
     public void removeWithTimestamp(@NotNull final ByteBuffer key) throws IOException {
         try {
             final byte[] convertedKey = convertValuesSubMinValue(key);
@@ -116,7 +130,7 @@ public class SimpleDAOImpl implements DAO {
         }
     }
 
-    private byte[] getValue(@NotNull ByteBuffer key) throws RocksDBException {
+    private byte[] getValue(@NotNull final ByteBuffer key) throws RocksDBException {
         final byte[] array = convertValuesSubMinValue(key);
         final byte[] value = rocksDB.get(array);
         if (value == null) {
@@ -125,6 +139,14 @@ public class SimpleDAOImpl implements DAO {
         return value;
     }
 
+    /**
+     * Get with timestamps.
+     *
+     * @param key - final ByteBuffer
+     * @return Timestamp
+     * @throws IOException            - throws an exception if RocksDBException exists.
+     * @throws NoSuchElementException - throws an exception if RocksDBException exists
+     */
     public Timestamp getWithTimestamp(@NotNull final ByteBuffer key) throws IOException, NoSuchElementException {
         try {
             final byte[] value = getValue(key);

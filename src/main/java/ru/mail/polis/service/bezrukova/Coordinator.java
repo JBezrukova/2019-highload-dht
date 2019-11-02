@@ -48,10 +48,10 @@ class Coordinator {
                          final int ack,
                          final boolean isProxied) throws IOException {
         int num = 0;
-        List<Timestamp> responses = new ArrayList<>();
-        String id = getParameter(request);
+        final List<Timestamp> responses = new ArrayList<>();
+        final String id = getParameter(request);
         final ByteBuffer key = getWrappedKey(id.getBytes(StandardCharsets.UTF_8));
-        for (String node : nodes) {
+        for (final String node : nodes) {
             try {
                 Response response;
                 if (topology.isMe(node)) {
@@ -80,7 +80,7 @@ class Coordinator {
     }
 
     @NotNull
-    private Response getResponseIfMe(ByteBuffer key) throws IOException {
+    private Response getResponseIfMe(final ByteBuffer key) throws IOException {
         Response result;
         try {
             final Timestamp val = dao.getWithTimestamp(key);
@@ -95,11 +95,11 @@ class Coordinator {
     }
 
     @NotNull
-    private ByteBuffer getWrappedKey(byte[] bytes) {
+    private ByteBuffer getWrappedKey(final byte[] bytes) {
         return ByteBuffer.wrap(bytes);
     }
 
-    private String getParameter(Request request) {
+    private String getParameter(final Request request) {
         return request.getParameter("id=");
     }
 
@@ -110,7 +110,7 @@ class Coordinator {
         int num = 0;
         final String id = getParameter(request);
         final ByteBuffer key = getWrappedKey(id.getBytes(Charset.defaultCharset()));
-        for (String node : nodes) {
+        for (final String node : nodes) {
             try {
                 if (topology.isMe(node)) {
                     dao.upsertWithTimestamp(key, getWrappedKey(request.getBody()));
@@ -140,7 +140,7 @@ class Coordinator {
         int num = 0;
         final String id = getParameter(request);
         final ByteBuffer key = getWrappedKey(id.getBytes(StandardCharsets.UTF_8));
-        for (String node : nodes) {
+        for (final String node : nodes) {
             try {
                 if (topology.isMe(node)) {
                     dao.removeWithTimestamp(key);
@@ -163,7 +163,7 @@ class Coordinator {
         }
     }
 
-    private Response response(final List<Timestamp> responses, final String[] nodes) throws IOException {
+    private Response response(final List<Timestamp> responses, final String... nodes) throws IOException {
         final Timestamp timestamp = Timestamp.merge(responses);
         if (timestamp.isPresent()) {
             if (isProxied) {
@@ -173,11 +173,7 @@ class Coordinator {
                     return new Response(Response.OK, timestamp.getPresentAsBytes());
                 }
             } else {
-                if (nodes.length == 1) {
-                    return new Response(Response.OK, timestamp.getPresentAsBytes());
-                } else {
-                    return new Response(Response.OK, timestamp.getPresentAsBytes());
-                }
+                return new Response(Response.OK, timestamp.getPresentAsBytes());
             }
         } else if (timestamp.isRemoved()) {
             return new Response(Response.NOT_FOUND, timestamp.toBytes());
@@ -194,15 +190,16 @@ class Coordinator {
             switch (request.getMethod()) {
                 case Request.METHOD_GET:
                     session.sendResponse(get(clusters, request, ack, isProxied));
-                    return;
+                    break;
                 case Request.METHOD_PUT:
                     session.sendResponse(upsert(clusters, request, ack, isProxied));
-                    return;
+                    break;
                 case Request.METHOD_DELETE:
                     session.sendResponse(delete(clusters, request, ack, isProxied));
-                    return;
+                    break;
                 default:
                     session.sendError(Response.METHOD_NOT_ALLOWED, "No method found");
+                    break;
             }
         } catch (IOException e) {
             session.sendError(Response.GATEWAY_TIMEOUT, e.getMessage());

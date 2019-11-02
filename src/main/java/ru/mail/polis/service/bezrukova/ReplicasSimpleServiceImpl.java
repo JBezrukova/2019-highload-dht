@@ -68,6 +68,16 @@ public class ReplicasSimpleServiceImpl extends HttpServer implements Service {
         Response act() throws IOException;
     }
 
+    /**
+     * Creating a Service.
+     *
+     * @param port     - final int
+     * @param nodes    - final Topology
+     * @param dao      - final DAO
+     * @param executor - final Executor
+     * @return - ReplicasSimpleServiceImpl
+     * @throws IOException - throws an exception from ReplicasSimpleServiceImpl
+     */
     public static Service create(final int port,
                                  final Topology<String> nodes,
                                  final DAO dao,
@@ -113,38 +123,36 @@ public class ReplicasSimpleServiceImpl extends HttpServer implements Service {
         }
 
         final String replicas = request.getParameter("replicas");
-        final RF rf = RF.getRf(replicas, session, this.rf, size);
+        final RF newRf = RF.getRf(replicas, session, rf, size);
         final ByteBuffer key = ByteBuffer.wrap(id.getBytes(Charset.defaultCharset()));
 
         if (topology.all().size() > 1 || isProxied) {
             final Coordinator coordinators = new Coordinator(dao, pool, topology, isProxied);
-            final String[] replica = getReplica(isProxied, rf, key);
-            coordinators.request(replica, request, rf.getAck(), session);
+            final String[] replica = getReplica(isProxied, newRf, key);
+            assert newRf != null;
+            coordinators.request(replica, request, newRf.getAck(), session);
         } else {
             executeRequest(request, session, id);
         }
     }
 
-    private void executeRequest(@NotNull Request request, HttpSession session, String id) throws IOException {
+    private void executeRequest(@NotNull final Request request,
+                                final HttpSession session,
+                                final String id) throws IOException {
         final int method = request.getMethod();
-        switch (method) {
-            case Request.METHOD_GET:
-                executeAsync(session, () -> get(id));
-                break;
-            case Request.METHOD_PUT:
-                executeAsync(session, () -> upsert(id, request.getBody()));
-                break;
-            case Request.METHOD_DELETE:
-                executeAsync(session, () -> delete(id));
-                break;
-            default:
-                session.sendError(Response.METHOD_NOT_ALLOWED, "No method found");
-                break;
+        if (method == Request.METHOD_GET) {
+            executeAsync(session, () -> get(id));
+        } else if (method == Request.METHOD_PUT) {
+            executeAsync(session, () -> upsert(id, request.getBody()));
+        } else if (method == Request.METHOD_DELETE) {
+            executeAsync(session, () -> delete(id));
+        } else {
+            session.sendError(Response.METHOD_NOT_ALLOWED, "No method found");
         }
     }
 
     @NotNull
-    private String[] getReplica(boolean isProxied, RF rf, ByteBuffer key) {
+    private String[] getReplica(final boolean isProxied, final RF rf, final ByteBuffer key) {
         String[] replica;
         if (isProxied) {
             replica = new String[]{topology.getMe()};
@@ -171,7 +179,8 @@ public class ReplicasSimpleServiceImpl extends HttpServer implements Service {
         }
 
         try {
-            final ByteBuffer wrap = ByteBuffer.wrap(startParameter.getBytes(Charset.defaultCharset()));
+            final byte[] bytes = startParameter.getBytes(Charset.defaultCharset());
+            final ByteBuffer wrap = ByteBuffer.wrap(bytes);
             final Iterator<Record> records = dao.range(wrap,
                     end == null ? null : ByteBuffer.wrap(end.getBytes(Charset.defaultCharset())));
             ((StorageSession) session).stream(records);
@@ -182,7 +191,8 @@ public class ReplicasSimpleServiceImpl extends HttpServer implements Service {
 
     private Response get(final String id) throws IOException {
         try {
-            final ByteBuffer wrap = ByteBuffer.wrap(id.getBytes(Charset.defaultCharset()));
+            final byte[] bytesArray = id.getBytes(Charset.defaultCharset());
+            final ByteBuffer wrap = ByteBuffer.wrap(bytesArray);
             final byte[] bytes = SimpleDAOImpl.getArray(dao.get(wrap));
             return new Response(Response.OK, bytes);
         } catch (NoSuchElementException e) {
@@ -203,11 +213,13 @@ public class ReplicasSimpleServiceImpl extends HttpServer implements Service {
     @Override
     public void handleDefault(final Request request, final HttpSession session) throws IOException {
         final String path = request.getPath();
+        final String entity = "/v0/entity";
+        final String entities = "/v0/entities";
         switch (path) {
-            case "/v0/entity":
+            case entity:
                 entity(request, session);
                 break;
-            case "/v0/entities":
+            case entities:
                 entities(request, session);
                 break;
             default:
@@ -278,7 +290,4 @@ public class ReplicasSimpleServiceImpl extends HttpServer implements Service {
             return ack;
         }
     }
-
 }
-
-

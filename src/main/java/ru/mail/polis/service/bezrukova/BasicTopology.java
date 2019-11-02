@@ -55,11 +55,11 @@ public class BasicTopology implements Topology<String> {
     @NotNull
     @Override
     public String[] replicas(final int size, final ByteBuffer id) {
-        int i = (id.hashCode() & Integer.MAX_VALUE) % nodes.length;
+        int index = (id.hashCode() & Integer.MAX_VALUE) % nodes.length;
         final String[] result = new String[size];
         for (int j = 0; j < size; j++) {
-            result[j] = nodes[i];
-            i = (i + 1) % nodes.length;
+            result[j] = nodes[index];
+            index = (index + 1) % nodes.length;
         }
         return result;
     }
