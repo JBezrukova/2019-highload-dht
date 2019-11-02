@@ -1,6 +1,8 @@
 package ru.mail.polis.dao;
 
+import static java.lang.Byte.MIN_VALUE;
 import org.jetbrains.annotations.NotNull;
+import static org.rocksdb.BuiltinComparator.BYTEWISE_COMPARATOR;
 import org.rocksdb.Options;
 import org.rocksdb.RocksDB;
 import org.rocksdb.RocksDBException;
@@ -12,9 +14,6 @@ import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.util.Iterator;
 import java.util.NoSuchElementException;
-
-import static java.lang.Byte.MIN_VALUE;
-import static org.rocksdb.BuiltinComparator.BYTEWISE_COMPARATOR;
 
 public class SimpleDAOImpl implements DAO {
 
@@ -76,6 +75,16 @@ public class SimpleDAOImpl implements DAO {
         }
     }
 
+    public void upsertWithTimestamp(@NotNull final ByteBuffer key, @NotNull final ByteBuffer value) throws IOException {
+        try {
+            final byte[] convertedKey = convertValuesSubMinValue(key);
+            final byte[] timestamp = Timestamp.fromPresent(value, System.currentTimeMillis()).toBytes();
+            rocksDB.put(convertedKey, timestamp);
+        } catch (RocksDBException e) {
+            throw new IOException(e);
+        }
+    }
+
     @Override
     public void remove(@NotNull final ByteBuffer key) throws IOException {
         try {
@@ -86,16 +95,40 @@ public class SimpleDAOImpl implements DAO {
         }
     }
 
+    public void removeWithTimestamp(@NotNull final ByteBuffer key) throws IOException {
+        try {
+            final byte[] convertedKey = convertValuesSubMinValue(key);
+            final byte[] value = Timestamp.timestamp(System.currentTimeMillis()).toBytes();
+            rocksDB.put(convertedKey, value);
+        } catch (RocksDBException e) {
+            throw new IOException(e);
+        }
+    }
+
     @NotNull
     @Override
     public ByteBuffer get(@NotNull final ByteBuffer key) throws IOException, NoSuchElementException {
         try {
-            final byte[] array = convertValuesSubMinValue(key);
-            final byte[] value = rocksDB.get(array);
-            if (value == null) {
-                throw new SimpleNoSuchElementException("No element for given key " + key.toString());
-            }
+            final byte[] value = getValue(key);
             return ByteBuffer.wrap(value);
+        } catch (RocksDBException e) {
+            throw new IOException(e);
+        }
+    }
+
+    private byte[] getValue(@NotNull ByteBuffer key) throws RocksDBException {
+        final byte[] array = convertValuesSubMinValue(key);
+        final byte[] value = rocksDB.get(array);
+        if (value == null) {
+            throw new SimpleNoSuchElementException("No element for given key " + key.toString());
+        }
+        return value;
+    }
+
+    public Timestamp getWithTimestamp(@NotNull final ByteBuffer key) throws IOException, NoSuchElementException {
+        try {
+            final byte[] value = getValue(key);
+            return Timestamp.fromBytes(value);
         } catch (RocksDBException e) {
             throw new IOException(e);
         }

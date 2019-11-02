@@ -15,5 +15,11 @@ public interface Topology<T> {
     boolean isMe(@NotNull T node);
 
     @NotNull
+    String getMe();
+
+    @NotNull
     Set<T> all();
+
+    @NotNull
+    String[] replicas(int count, ByteBuffer id);
 }
