@@ -42,25 +42,7 @@ public class BasicTopology implements Topology<String> {
 
     @NotNull
     @Override
-    public String getMe() {
-        return me;
-    }
-
-    @NotNull
-    @Override
     public Set<String> all() {
         return Set.of(nodes);
-    }
-
-    @NotNull
-    @Override
-    public String[] replicas(final int size, final ByteBuffer id) {
-        int index = (id.hashCode() & Integer.MAX_VALUE) % nodes.length;
-        final String[] result = new String[size];
-        for (int j = 0; j < size; j++) {
-            result[j] = nodes[index];
-            index = (index + 1) % nodes.length;
-        }
-        return result;
     }
 }
