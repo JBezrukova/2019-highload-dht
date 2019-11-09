@@ -1,0 +1,26 @@
+Put replicas                       Put sharded
+
+50.000%    1.32ms             50.000%    1.36ms
+75.000%    1.90ms             75.000%    1.99ms
+90.000%    2.49ms             90.000%    2.74ms
+99.000%    16.94ms            99.000%   28.08ms
+99.900%    25.89ms            99.900%   36.99ms
+99.990%    32.61ms            99.990%   40.86ms
+99.999%    34.85ms            99.999%   42.49ms
+100.000%   35.01ms            100.000%  42.88ms
+
+The working time of the put method has been reduced (for 99.000 - 99.900%) for 35%.
+The working time of the put method has been reduced (for 99.999 - 100%) for 20%.
+
+Get replicas                         Get Sharded
+
+50.000%    1.33ms             50.000%    1.30ms
+75.000%    1.91ms             75.000%    1.87ms
+90.000%    2.42ms             90.000%    2.36ms
+99.000%    5.34ms             99.000%    5.41ms
+99.900%    15.89ms            99.900%   13.65ms
+99.990%   21.31ms             99.990%   24.29ms
+99.999%   22.21ms             99.999%   27.34ms
+100.000%  22.42ms             100.000%  27.85ms
+
+The working time of the put method has been reduced (for 99.990 - 100%) for 15%.
