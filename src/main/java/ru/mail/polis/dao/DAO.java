@@ -109,9 +109,9 @@ public interface DAO extends Closeable {
      * Getting a Value with timestamp by given key.
      *
      * @param key - ByteBuffer key
-     * @return
-     * @throws IOException
-     * @throws NoSuchElementException
+     * @return a Value with timestamp
+     * @throws IOException is possible
+     * @throws NoSuchElementException is possible
      */
     Value getValue(@NotNull ByteBuffer key) throws IOException, NoSuchElementException;
 

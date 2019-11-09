@@ -2,6 +2,7 @@ package ru.mail.polis.dao;
 
 import static java.lang.Byte.MIN_VALUE;
 import org.jetbrains.annotations.NotNull;
+
 import static org.rocksdb.BuiltinComparator.BYTEWISE_COMPARATOR;
 import org.rocksdb.Options;
 import org.rocksdb.RocksDB;
@@ -77,7 +78,7 @@ public class SimpleDAOImpl implements DAO {
     }
 
     @Override
-    public void upsertValue(@NotNull ByteBuffer key, @NotNull final ByteBuffer value) throws IOException {
+    public void upsertValue(@NotNull final ByteBuffer key, @NotNull final ByteBuffer value) throws IOException {
         try {
             final byte[] convertedKey = convertValuesSubMinValue(key);
             final byte[] timestamp = Value.createPresent(value, System.currentTimeMillis()).toBytes();
@@ -133,7 +134,7 @@ public class SimpleDAOImpl implements DAO {
         }
     }
 
-    private byte[] getValueBytes(@NotNull ByteBuffer key) throws RocksDBException {
+    private byte[] getValueBytes(@NotNull final ByteBuffer key) throws RocksDBException {
         final byte[] array = convertValuesSubMinValue(key);
         final byte[] value = rocksDB.get(array);
         if (value == null) {

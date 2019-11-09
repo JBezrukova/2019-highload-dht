@@ -3,7 +3,7 @@ package ru.mail.polis.service.bezrukova;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 
-public class Value {
+public final class Value {
 
     private final boolean isDeleted;
     private final long timestamp;
@@ -25,7 +25,7 @@ public class Value {
         return new Value(timestamp, ByteBuffer.allocate(0), true);
     }
 
-    public static Value createAbsent() {
+    static Value createAbsent() {
         return new Value(-1, null, false);
     }
 
@@ -42,10 +42,10 @@ public class Value {
     }
 
     private ByteBuffer getData() throws IOException {
-        if (!isDeleted) {
-            return data;
-        } else {
+        if (isDeleted) {
             throw new IOException("Is not present");
+        } else {
+            return data;
         }
     }
 
@@ -56,19 +56,27 @@ public class Value {
         return bytes;
     }
 
+    /**
+     * Getting a Value with timestamp from bytes.
+     *
+     * @param bytes - byte array
+     * @return Valye with timestamp.
+     */
+
     public static Value fromBytes(final byte[] bytes) {
         final ByteBuffer byteBuffer = ByteBuffer.wrap(bytes);
         final short isDeleted = byteBuffer.getShort();
         final boolean isDeletedB;
-        if (isDeleted == 1) {
-            isDeletedB = true;
-        } else {
-            isDeletedB = false;
-        }
+        isDeletedB = isDeleted == 1;
         final long timestamp = byteBuffer.getLong();
         return new Value(timestamp, byteBuffer, isDeletedB);
     }
 
+    /**
+     * Creating a byte array from Value with timestamp.
+     *
+     * @return byte array
+     */
     public byte[] toBytes() {
         short deleted;
         if (isDeleted) {
@@ -76,10 +84,9 @@ public class Value {
         } else {
             deleted = -1;
         }
-        byte[] bytes = ByteBuffer.allocate(Short.BYTES + Long.BYTES + data.remaining())
+        return ByteBuffer.allocate(Short.BYTES + Long.BYTES + data.remaining())
                 .putShort(deleted)
                 .putLong(timestamp)
                 .put(data.duplicate()).array();
-        return bytes;
     }
 }
