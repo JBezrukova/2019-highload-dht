@@ -191,15 +191,14 @@ public class ReplicasSimpleServiceImpl extends HttpServer implements Service {
                         acks++;
                     }
                 }
+                if (acks == ack) {
+                    return new Response(Response.ACCEPTED, Response.EMPTY);
+                }
             } catch (IOException | PoolException | HttpException | InterruptedException e) {
                 logger.log(Level.INFO, "upsert method", e);
             }
         }
-        if (acks >= ack) {
-            return new Response(Response.ACCEPTED, Response.EMPTY);
-        } else {
-            return new Response(Response.GATEWAY_TIMEOUT, Response.EMPTY);
-        }
+        return new Response(Response.GATEWAY_TIMEOUT, Response.EMPTY);
     }
 
     private Response upsert(final String id, final byte[] value) throws IOException {

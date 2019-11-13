@@ -19,15 +19,21 @@ class RF {
     private static RF of(final String value) {
         final List<String> values = Splitter.on('/').splitToList(value.replace("=", ""));
         if (values.size() != 2) {
-            throw new IllegalArgumentException();
+            throw new IllegalArgumentException("wrong value size");
+        }
+        if (Integer.parseInt(values.get(0)) < 1 || Integer.parseInt(values.get(1)) < 1) {
+            throw new IllegalArgumentException("wrong values");
+        }
+        if (Integer.parseInt(values.get(0)) > Integer.parseInt(values.get(1))) {
+            throw new IllegalArgumentException("First value must be less than second");
         }
         return new RF(Integer.parseInt(values.get(0)), Integer.parseInt(values.get(1)));
     }
 
     static RF getRf(final String replicas,
-                                              final HttpSession session,
-                                              final RF rf,
-                                              final int size) throws IOException {
+                    final HttpSession session,
+                    final RF rf,
+                    final int size) throws IOException {
         RF newRf = null;
         try {
             if (replicas == null) {
