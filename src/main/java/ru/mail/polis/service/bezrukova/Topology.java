@@ -16,4 +16,10 @@ public interface Topology<T> {
 
     @NotNull
     Set<T> all();
+
+    @NotNull
+    String[] replicas(int count, ByteBuffer id);
+
+    @NotNull
+    String getMe();
 }

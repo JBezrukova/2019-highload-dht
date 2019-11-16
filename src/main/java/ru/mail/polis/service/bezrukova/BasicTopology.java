@@ -45,4 +45,22 @@ public class BasicTopology implements Topology<String> {
     public Set<String> all() {
         return Set.of(nodes);
     }
+
+    @NotNull
+    @Override
+    public String[] replicas(final int count, final ByteBuffer id) {
+        int num = (id.hashCode() & Integer.MAX_VALUE) % nodes.length;
+        final String[] result = new String[count];
+        for (int j = 0; j < count; j++) {
+            result[j] = nodes[num];
+            num = (num + 1) % nodes.length;
+        }
+        return result;
+    }
+
+    @NotNull
+    @Override
+    public String getMe() {
+        return me;
+    }
 }
