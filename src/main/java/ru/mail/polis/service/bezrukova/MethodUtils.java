@@ -14,10 +14,14 @@ import java.util.Comparator;
 import java.util.Iterator;
 import java.util.List;
 import java.util.NoSuchElementException;
+import java.util.function.Supplier;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 
 public final class MethodUtils {
 
     private static final String NO_METHOD_FOUND = "No method found";
+    private static final Logger logger = Logger.getLogger(MethodUtils.class.getName());
 
     private MethodUtils() {
     }
@@ -117,7 +121,7 @@ public final class MethodUtils {
      *
      * @param request - Request
      * @param session - session
-     * @param dao - DAO
+     * @param dao     - DAO
      * @throws IOException is possible
      */
     static void entities(final Request request, final HttpSession session, final DAO dao) throws IOException {
@@ -145,4 +149,19 @@ public final class MethodUtils {
             session.sendError(Response.INTERNAL_ERROR, e.getMessage());
         }
     }
+
+    @NotNull
+    static Supplier<Value> getSupplier(String id, final DAO dao) {
+        ByteBuffer key = ByteBuffer.wrap(id.getBytes(Charset.defaultCharset()));
+        final Supplier<Value> supplier = () -> {
+            try {
+                return dao.getValue(key);
+            } catch (IOException e) {
+                logger.log(Level.INFO, e.getMessage());
+            }
+            return null;
+        };
+        return supplier;
+    }
+
 }

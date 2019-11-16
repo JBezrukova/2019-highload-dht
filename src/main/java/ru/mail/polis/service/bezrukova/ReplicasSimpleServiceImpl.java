@@ -1,7 +1,5 @@
 package ru.mail.polis.service.bezrukova;
 
-import one.nio.http.HttpClient;
-import one.nio.http.HttpException;
 import one.nio.http.HttpServer;
 import one.nio.http.HttpServerConfig;
 import one.nio.http.HttpSession;
@@ -9,19 +7,24 @@ import one.nio.http.Path;
 import one.nio.http.Request;
 import one.nio.http.Response;
 import one.nio.net.Socket;
-import one.nio.pool.PoolException;
 import ru.mail.polis.dao.DAO;
 import ru.mail.polis.dao.SimpleDAOImpl;
 import ru.mail.polis.service.Service;
 
 import java.io.IOException;
+import java.net.URI;
+import java.net.http.HttpClient;
+import java.net.http.HttpRequest;
+import java.net.http.HttpResponse;
 import java.nio.ByteBuffer;
 import java.nio.charset.Charset;
-import java.nio.charset.StandardCharsets;
+import java.time.Duration;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.NoSuchElementException;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Executor;
 import java.util.logging.Level;
 import java.util.logging.Logger;
@@ -30,13 +33,14 @@ public class ReplicasSimpleServiceImpl extends HttpServer implements Service {
 
     private static final String ENTITY_HEADER = "/v0/entity?id=";
     private static final String NO_METHOD_FOUND = "No method found";
+    private static final int TIMEOUT = 200;
     private final DAO dao;
     private final Executor executor;
     private final Logger logger = Logger.getLogger(AsyncSimpleServiceImpl.class.getName());
     private final Topology<String> topology;
     private final Map<String, HttpClient> pool;
     private final RF rf;
-    private static final String PROXY_HEADER = "X-OK-Proxy: True";
+    private static final String PROXY_HEADER = "PROXY_HEADER";
 
     /**
      * Creating ReplicasSimpleServiceImpl.
@@ -133,27 +137,54 @@ public class ReplicasSimpleServiceImpl extends HttpServer implements Service {
     private Response get(final String id,
                          final RF rf,
                          final boolean isProxied) throws IOException {
-        int num = 0;
         final String[] nodes = MethodUtils.getReplica(ByteBuffer.wrap(id.getBytes(Charset.defaultCharset())),
                 rf, isProxied, topology);
         final List<Value> responses = new ArrayList<>();
+        final List<CompletableFuture<Value>> futures = new ArrayList<>();
         for (final String node : nodes) {
+            CompletableFuture<Value> valueCompletableFuture;
+            if (topology.isMe(node)) {
+                final ByteBuffer byteBuffer = ByteBuffer.wrap(id.getBytes(Charset.defaultCharset()));
+                valueCompletableFuture = CompletableFuture.supplyAsync(() -> {
+                    try {
+                        return dao.getValue(byteBuffer);
+                    } catch (IOException e) {
+//                        log.error(e);
+                    }
+                    return null;
+                });
+//                valueCompletableFuture = CompletableFuture.supplyAsync(MethodUtils.getSupplier(id, dao));
+            } else {
+                final HttpRequest httpRequest = HttpRequest
+                        .newBuilder()
+                        .uri(URI.create(node + ENTITY_HEADER + id))
+                        .setHeader(PROXY_HEADER, "True")
+                        .timeout(Duration.ofMillis(TIMEOUT))
+                        .GET()
+                        .build();
+                valueCompletableFuture = pool
+                        .get(node)
+                        .sendAsync(httpRequest, HttpResponse.BodyHandlers.ofByteArray())
+                        .thenApply(response -> {
+                            if (response.statusCode() == 404 && response.body().length == 0) {
+                                return Value.createAbsent();
+                            } else if (response.statusCode() != 500) {
+                                return Value.fromBytes(response.body());
+                            }
+                            return Value.createAbsent();
+                        });
+            }
+            futures.add(valueCompletableFuture);
+        }
+        int num = 0;
+        for (CompletableFuture<Value> future : futures) {
             try {
-                Response response;
-                if (topology.isMe(node)) {
-                    response = MethodUtils.getResponseIfMe(ByteBuffer.wrap(id.getBytes(StandardCharsets.UTF_8)), dao);
-                } else {
-                    response = pool.get(node).get(ENTITY_HEADER + id, PROXY_HEADER);
+                Value value = future.get();
+                if (value != null) {
+                    responses.add(value);
+                    num++;
                 }
-                if (response.getStatus() == 404 && response.getBody().length == 0) {
-                    responses.add(Value.createAbsent());
-                } else if (response.getStatus() == 500) {
-                    continue;
-                } else {
-                    responses.add(Value.fromBytes(response.getBody()));
-                }
-                num++;
-            } catch (HttpException | PoolException | InterruptedException e) {
+            } catch (InterruptedException | ExecutionException e) {
                 logger.log(Level.INFO, e.getMessage());
             }
         }
@@ -179,24 +210,54 @@ public class ReplicasSimpleServiceImpl extends HttpServer implements Service {
             }
         }
         final String[] nodes = topology.replicas(rf.getFrom(), ByteBuffer.wrap(id.getBytes(Charset.defaultCharset())));
-        int acks = 0;
+        final List<CompletableFuture<String>> completableFutures = new ArrayList<>();
         for (final String node : nodes) {
-            try {
-                if (topology.isMe(node)) {
-                    dao.removeValue(ByteBuffer.wrap(id.getBytes(Charset.defaultCharset())));
-                    acks++;
-                } else {
-                    final Response response = pool.get(node).delete(ENTITY_HEADER + id, PROXY_HEADER);
-                    if (response.getStatus() == 202) {
-                        acks++;
+            final CompletableFuture<String> completableFuture;
+            if (topology.isMe(node)) {
+                completableFuture = CompletableFuture.runAsync(() -> {
+                    try {
+                        dao.removeValue(ByteBuffer.wrap(id.getBytes(Charset.defaultCharset())));
+                    } catch (IOException e) {
+                        logger.log(Level.INFO, e.getMessage());
                     }
-                }
-                if (acks == ack) {
-                    return new Response(Response.ACCEPTED, Response.EMPTY);
-                }
-            } catch (IOException | PoolException | HttpException | InterruptedException e) {
-                logger.log(Level.INFO, "upsert method", e);
+                }).handle((aVoid, throwable) -> {
+                    if (throwable != null) {
+                        return Response.INTERNAL_ERROR;
+                    }
+                    return Response.ACCEPTED;
+                });
+            } else {
+                final HttpRequest httpRequest = HttpRequest
+                        .newBuilder()
+                        .uri(URI.create(node + ENTITY_HEADER + id))
+                        .setHeader(PROXY_HEADER, "True")
+                        .timeout(Duration.ofMillis(TIMEOUT))
+                        .DELETE()
+                        .build();
+                completableFuture = pool
+                        .get(node)
+                        .sendAsync(httpRequest, HttpResponse.BodyHandlers.discarding())
+                        .handle((response, throwable) -> {
+                            if (response.statusCode() == 202) {
+                                return Response.ACCEPTED;
+                            }
+                            return Response.INTERNAL_ERROR;
+                        });
             }
+            completableFutures.add(completableFuture);
+        }
+        int acks = 0;
+        for (CompletableFuture<String> future : completableFutures) {
+            try {
+                if (future.get().equals(Response.ACCEPTED)) {
+                    acks++;
+                }
+            } catch (InterruptedException | ExecutionException e) {
+                logger.log(Level.INFO, e.getMessage());
+            }
+        }
+        if (acks >= ack) {
+            return new Response(Response.ACCEPTED, Response.EMPTY);
         }
         return new Response(Response.GATEWAY_TIMEOUT, Response.EMPTY);
     }
@@ -217,19 +278,49 @@ public class ReplicasSimpleServiceImpl extends HttpServer implements Service {
         }
         final String[] nodes = topology.replicas(rf.getFrom(), ByteBuffer.wrap(id.getBytes(Charset.defaultCharset())));
         int acks = 0;
+        final List<CompletableFuture<String>> completableFutureList = new ArrayList<>();
         for (final String node : nodes) {
-            try {
-                if (topology.isMe(node)) {
-                    dao.upsertValue(ByteBuffer.wrap(id.getBytes(Charset.defaultCharset())), ByteBuffer.wrap(value));
-                    acks++;
-                } else {
-                    final Response response = pool.get(node).put(ENTITY_HEADER + id, value, PROXY_HEADER);
-                    if (response.getStatus() == 201) {
-                        acks++;
+            final CompletableFuture<String> completableFuture;
+            if (topology.isMe(node)) {
+                completableFuture = CompletableFuture.runAsync(() -> {
+                    try {
+                        dao.upsertValue(ByteBuffer.wrap(id.getBytes(Charset.defaultCharset())), ByteBuffer.wrap(value));
+                    } catch (IOException e) {
+                        logger.log(Level.INFO, e.getMessage());
                     }
+                }).handle((aVoid, throwable) -> {
+                    if (throwable != null) {
+                        return Response.INTERNAL_ERROR;
+                    }
+                    return Response.CREATED;
+                });
+            } else {
+                final HttpRequest httpRequest = HttpRequest
+                        .newBuilder()
+                        .uri(URI.create(node + ENTITY_HEADER + id))
+                        .setHeader(PROXY_HEADER, "True")
+                        .timeout(Duration.ofMillis(TIMEOUT))
+                        .PUT(HttpRequest.BodyPublishers.ofByteArray(value))
+                        .build();
+                completableFuture = pool
+                        .get(node)
+                        .sendAsync(httpRequest, HttpResponse.BodyHandlers.discarding())
+                        .handle((response, throwable) -> {
+                            if (response.statusCode() == 201) {
+                                return Response.CREATED;
+                            }
+                            return Response.INTERNAL_ERROR;
+                        });
+            }
+            completableFutureList.add(completableFuture);
+        }
+        for (CompletableFuture<String> future : completableFutureList) {
+            try {
+                if (future.get().equals(Response.CREATED)) {
+                    acks++;
                 }
-            } catch (IOException | PoolException | InterruptedException | HttpException e) {
-                logger.log(Level.INFO, "upsert method", e);
+            } catch (InterruptedException | ExecutionException e) {
+                logger.log(Level.INFO, e.getMessage());
             }
         }
         if (acks >= ack) {

@@ -1,13 +1,12 @@
 package ru.mail.polis.service.bezrukova;
 
-import one.nio.http.HttpClient;
 import one.nio.http.HttpServerConfig;
-import one.nio.net.ConnectionString;
 import one.nio.server.AcceptorConfig;
 import ru.mail.polis.dao.DAO;
 import ru.mail.polis.service.Service;
 
 import java.io.IOException;
+import java.net.http.HttpClient;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.concurrent.Executor;
@@ -53,7 +52,7 @@ public final class ServiceCreatorUtilities {
                 continue;
             }
             assert !pool.containsKey(node);
-            pool.put(node, new HttpClient(new ConnectionString(node + "?timeout=100")));
+            pool.put(node, HttpClient.newBuilder().build());
         }
         return pool;
     }
