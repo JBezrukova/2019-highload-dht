@@ -9,10 +9,14 @@ import java.util.concurrent.ThreadLocalRandom;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
-public class AmmoGenerator {
+public final class AmmoGenerator {
 
     private static final int LENGTH = 256;
     private static final Logger logger = Logger.getLogger(AmmoGenerator.class.getName());
+    private static final String NEW_LINE = "\r\n";
+
+    private AmmoGenerator() {
+    }
 
     private static byte[] randomValue() {
         final byte[] result = new byte[LENGTH];
@@ -84,34 +88,40 @@ public class AmmoGenerator {
         final ByteArrayOutputStream stream = new ByteArrayOutputStream();
         final byte[] val = randomValue();
         try (Writer writer = new OutputStreamWriter(stream, StandardCharsets.US_ASCII)) {
-            writer.write("PUT /v0/entity?id=" + key + " HTTP/1.1\r\n");
-            writer.write("Content-Length: " + val.length + "\r\n");
-            writer.write("\r\n");
+            writer.write("PUT /v0/entity?id=" + key + " HTTP/1.1" + NEW_LINE);
+            writer.write("Content-Length: " + val.length + NEW_LINE);
+            writer.write(NEW_LINE);
         }
         stream.write(val);
         System.out.write(Integer.toString(stream.size()).getBytes(StandardCharsets.US_ASCII));
         System.out.write(" put\n".getBytes(StandardCharsets.US_ASCII));
         stream.writeTo(System.out);
-        System.out.write("\r\n".getBytes(StandardCharsets.US_ASCII));
+        System.out.write(NEW_LINE.getBytes(StandardCharsets.US_ASCII));
     }
 
     private static void get(final String key) throws IOException {
         final ByteArrayOutputStream stream = new ByteArrayOutputStream();
         try (Writer writer = new OutputStreamWriter(stream, StandardCharsets.US_ASCII)) {
-            writer.write("GET /v0/entity?id=" + key + " HTTP/1.1\r\n");
-            writer.write("\r\n");
+            writer.write("GET /v0/entity?id=" + key + " HTTP/1.1" + NEW_LINE);
+            writer.write(NEW_LINE);
         } catch (IOException e) {
             logger.log(Level.INFO, e.getMessage());
         }
         System.out.write(Integer.toString(stream.size()).getBytes(StandardCharsets.US_ASCII));
         System.out.write(" get\n".getBytes(StandardCharsets.US_ASCII));
         stream.writeTo(System.out);
-        System.out.write("\r\n".getBytes(StandardCharsets.US_ASCII));
+        System.out.write(NEW_LINE.getBytes(StandardCharsets.US_ASCII));
     }
 
-    public static void main(String[] args) throws IOException {
+    /**
+     * Main method of AmmoGenerator.
+     *
+     * @param args - method and size of requests
+     * @throws IOException can be caused by Writers in gwt and put
+     */
+    public static void main(final String[] args) throws IOException {
         if (args.length > 3 || args.length < 2) {
-            System.err.println("error in arguments");
+            logger.log(Level.INFO, "error in arguments");
             System.exit(-1);
         }
         final String mode = args[0];
