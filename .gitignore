@@ -19,3 +19,4 @@
 !*.svg
 # ...even if they are in subdirectories
 !*/
+!*.md
